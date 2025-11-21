@@ -1,5 +1,6 @@
 package com.cuogne.callapiretrofit
 
+import retrofit2.Call
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -22,4 +23,12 @@ interface ApiService {
     suspend fun getDetailPokemon(
         @Url url: String
     ): Response<PokemonDetail>
+
+    // for call (not coroutine)
+    @GET("pokemon")
+    fun getPoke(
+        @Query("limit") limit: Int,
+        @Query("offset") offset: Int
+    ): Call<Pokemon>
+
 }

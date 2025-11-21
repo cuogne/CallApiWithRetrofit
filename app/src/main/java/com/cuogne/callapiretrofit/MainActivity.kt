@@ -7,6 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import retrofit2.Call
+import retrofit2.Response
 /*
 Tóm lại các bước để call api là:
 
@@ -35,9 +37,17 @@ class MainActivity : AppCompatActivity() {
 
         tvResult = findViewById(R.id.textView)
 
-        getData()
+//        getData()
+        getDataUsingCall()
     }
 
+    /*
+    Sử dụng coroutine (cách hiện đại hơn thằng ở dưới)
+    dùng lifecycleScope.launch(Dispatchers.IO) để chạy bất đồng bộ trên 1 IO thread (tránh block main thread)
+    call api bằng suspend fun và nhận về 1 đối tượng Response<T>
+    check response.isSuccessful để xem api có được gọi thành công ko
+    lấy data bằng response.body()
+     */
     private fun getData() {
         lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -71,5 +81,40 @@ class MainActivity : AppCompatActivity() {
                 Log.e("API_ERROR", "Exception trong coroutine: ${e.message}", e)
             }
         }
+    }
+
+    /*
+    Không dùng coroutine, sử dụng Call và Callback để call api (cách viết cổ của Retrofit)
+    Sử dụng enqueue(object: retrofit2.Callback<T>{})
+    Và implement 2 hàm
+        - onResponse để xử lí dữ liệu trả về (sử dụng response.body() và check = isSuccessful)
+        - onFailure để xử lí lỗi
+     */
+    private fun getDataUsingCall(){
+        val call = RetrofitClient.instance.getPoke(5, 0)
+
+        call.enqueue(object: retrofit2.Callback<Pokemon>{
+            override fun onResponse(
+                call: Call<Pokemon?>,
+                response: Response<Pokemon?>
+            ) {
+                if (response.isSuccessful){
+                    response.body()?.let {
+                        Log.d("API CALL", "${it.results}")
+                    }
+                }
+                else {
+                    Log.e("ERROR", "ERROR")
+                }
+            }
+
+            override fun onFailure(
+                call: Call<Pokemon?>,
+                t: Throwable
+            ) {
+                Log.e("API_CALL_ENQUEUE", "onFailure: ${t.message}", t)
+            }
+
+        })
     }
 }
