@@ -5,7 +5,10 @@ import android.util.Log
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import retrofit2.Call
 import retrofit2.Response
@@ -38,7 +41,8 @@ class MainActivity : AppCompatActivity() {
         tvResult = findViewById(R.id.textView)
 
 //        getData()
-        getDataUsingCall()
+//        getDataUsingCall()
+        improveAsyncGetData()
     }
 
     /*
@@ -116,5 +120,42 @@ class MainActivity : AppCompatActivity() {
             }
 
         })
+    }
+
+    // su dung async de lay du lieu tu nhieu api cung luc -> tra ve 1 deferred
+    // su dung awaitAll() de doi deferred do
+    private fun improveAsyncGetData(){
+        lifecycleScope.launch(Dispatchers.IO) {
+            try {
+                val response1 = RetrofitClient.instance.getPokemon(10, 0)
+
+                if (response1.isSuccessful){
+                    val pokeResult = response1.body()?.results
+
+                    if (!pokeResult.isNullOrEmpty()){
+                        val deferredPoke = pokeResult.map { result ->
+                            async {
+                                RetrofitClient.instance.getDetailPokemon(result.url)
+                            }
+                        }
+
+                        val response2 = deferredPoke.awaitAll()
+                        val cleanData = response2.mapNotNull { res ->
+                            if (res.isSuccessful){
+                                val data = res.body()
+                                Log.d("API", "${data?.id}, ${data?.name}, ${data?.sprites?.img}")
+                                data
+                            }
+                            else {
+                                null
+                            }
+                        }
+                    }
+                }
+            }
+            catch (e: Exception){
+
+            }
+        }
     }
 }
